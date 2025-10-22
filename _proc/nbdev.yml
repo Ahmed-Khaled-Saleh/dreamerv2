@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "dreamerv2"
+  site-url: "https://Ahmed-Khaled-Saleh.github.io/dreamerv2"
+  description: "Pytorch implementation of Dreamer-v2: Visual Model Based RL Algorithm."
+  repo-branch: main
+  repo-url: "https://github.com/Ahmed-Khaled-Saleh/dreamerv2"
