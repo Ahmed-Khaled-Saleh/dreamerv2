@@ -6,6 +6,8 @@
 __all__ = ['Evaluator']
 
 # %% ../../nbs/01_training.evaluator.ipynb 2
+from fastcore.all import *
+from fastcore.utils import *
 import numpy as np
 import torch 
 from ..models.actor import DiscreteActionModel
@@ -58,29 +60,33 @@ class Evaluator(object):
         self.ObsDecoder.load_state_dict(saved_dict["ObsDecoder"])
         self.ActionModel.load_state_dict(saved_dict["ActionModel"])
 
-    def eval_saved_agent(self, env, model_path):
-        self.load_model(self.config, model_path)
-        eval_episode = self.config.eval_episode
-        eval_scores = []    
-        for e in range(eval_episode):
-            obs, score = env.reset(), 0
-            done = False
-            prev_rssmstate = self.RSSM._init_rssm_state(1)
-            prev_action = torch.zeros(1, self.action_size).to(self.device)
-            while not done:
-                with torch.no_grad():
-                    embed = self.ObsEncoder(torch.tensor(obs, dtype=torch.float32).unsqueeze(0).to(self.device))    
-                    _, posterior_rssm_state = self.RSSM.rssm_observe(embed, prev_action, not done, prev_rssmstate)
-                    model_state = self.RSSM.get_model_state(posterior_rssm_state)
-                    action, _ = self.ActionModel(model_state)
-                    prev_rssmstate = posterior_rssm_state
-                    prev_action = action
-                next_obs, rew, done, _ = env.step(action.squeeze(0).cpu().numpy())
-                if self.config.eval_render:
-                    env.render()
-                score += rew
-                obs = next_obs
-            eval_scores.append(score)
-        print('average evaluation score for model at ' + model_path + ' = ' +str(np.mean(eval_scores)))
-        env.close()
-        return np.mean(eval_scores)
+    
+
+# %% ../../nbs/01_training.evaluator.ipynb 4
+@patch
+def eval_saved_agent(self: Evaluator, env, model_path):
+    self.load_model(self.config, model_path)
+    eval_episode = self.config.eval_episode
+    eval_scores = []    
+    for e in range(eval_episode):
+        obs, score = env.reset(), 0
+        done = False
+        prev_rssmstate = self.RSSM._init_rssm_state(1)
+        prev_action = torch.zeros(1, self.action_size).to(self.device)
+        while not done:
+            with torch.no_grad():
+                embed = self.ObsEncoder(torch.tensor(obs, dtype=torch.float32).unsqueeze(0).to(self.device))    
+                _, posterior_rssm_state = self.RSSM.rssm_observe(embed, prev_action, not done, prev_rssmstate)
+                model_state = self.RSSM.get_model_state(posterior_rssm_state)
+                action, _ = self.ActionModel(model_state)
+                prev_rssmstate = posterior_rssm_state
+                prev_action = action
+            next_obs, rew, done, _ = env.step(action.squeeze(0).cpu().numpy())
+            if self.config.eval_render:
+                env.render()
+            score += rew
+            obs = next_obs
+        eval_scores.append(score)
+    print('average evaluation score for model at ' + model_path + ' = ' +str(np.mean(eval_scores)))
+    env.close()
+    return np.mean(eval_scores)
